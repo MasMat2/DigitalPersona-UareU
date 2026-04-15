@@ -1,6 +1,7 @@
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.Reader;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -27,6 +28,7 @@ public class Identification
 	private final int m_nFingerCnt = 4; // how many fingerprints to collect for the identification
 	private String[] m_vFingerNames; // finger names for the collection of prints
 	private Fmd[] m_fmds;
+	private int[]  m_socios; // ← add this
 	private final String m_strPrompt1 = "Identification started,\n";
 
 	private Identification(Reader reader) {
@@ -191,10 +193,11 @@ public class Identification
 
 	private Fmd[] loadFmdsFromDatabase() {
 		Importer importer = UareUGlobal.GetImporter();
-		java.util.List<Fmd> list = new java.util.ArrayList<>();
+		java.util.List<Fmd> fmdList = new java.util.ArrayList<>();
+		java.util.List<Integer> socioList = new java.util.ArrayList<>();
 
 		String url = "jdbc:mysql://194.238.29.232:3307/bdksiste_bdkgym" +
-				"?useSSL=false&characterEncoding=ISO-8859-1"; // ← critical
+				"?useSSL=false&characterEncoding=ISO-8859-1";
 		String user = "root";
 		String pass = "Fum4s!Crick0Fu+Maryjuana";
 
@@ -208,31 +211,29 @@ public class Identification
 				if (raw == null || raw.isEmpty())
 					continue;
 
-				// latin1 mediumtext = raw bytes stored as single-byte chars
-				// must use ISO-8859-1 to preserve byte values exactly
 				byte[] data = raw.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
 
-				// print header bytes of first record to verify format
-				if (list.isEmpty()) {
-					System.out.printf("First row header: %02X %02X %02X %02X (length=%d)%n",
-							data[0], data[1], data[2], data[3], data.length);
-				}
-
 				try {
-					list.add(importer.ImportFmd(
+					fmdList.add(importer.ImportFmd(
 							data,
 							Fmd.Format.DP_REG_FEATURES,
 							Fmd.Format.DP_REG_FEATURES));
+					socioList.add(rs.getInt("socio")); // ← same index as fmdList
 				} catch (UareUException e) {
 					System.out.println("Skipping row " + rs.getInt("id") +
 							" (socio=" + rs.getInt("socio") + "): " + e.getMessage());
+					// NOTE: only add to socioList if fmd add succeeded
 				}
 			}
 		} catch (java.sql.SQLException e) {
 			e.printStackTrace();
 		}
-		System.out.println("Loaded " + list.size() + " FMDs from tbhuellas");
-		return list.toArray(new Fmd[0]);
+
+		// Store socios in parallel int[]
+		m_socios = socioList.stream().mapToInt(Integer::intValue).toArray();
+
+		System.out.println("Loaded " + fmdList.size() + " FMDs from tbhuellas");
+		return fmdList.toArray(new Fmd[0]);
 	}
 
 	private void doModal(JDialog dlgParent) {
@@ -264,19 +265,24 @@ public class Identification
 		m_fmds = loadFmdsFromDatabase();
 		try {
 			int falsepositive_rate = Engine.PROBABILITY_ONE / 100000;
-			Engine.Candidate[] vCandidates = engine.Identify(fmdToIdentify, 0, m_fmds, falsepositive_rate,
-					m_fmds.length);
+			Engine.Candidate[] vCandidates = engine.Identify(
+					fmdToIdentify, 0, m_fmds, falsepositive_rate, 1);
 			if (0 != vCandidates.length) {
-				int falsematch_rate = engine.Compare(fmdToIdentify, 0, m_fmds[vCandidates[0].fmd_index],
-						vCandidates[0].view_index);
-				m_text.append(String.format("Identified! Score: 0x%x\n", falsematch_rate));
+				int matchedIndex = vCandidates[0].fmd_index;
+				int matchedSocio = m_socios[matchedIndex]; // ← look up socio
+
+				int falsematch_rate = engine.Compare(
+						fmdToIdentify, 0,
+						m_fmds[matchedIndex], vCandidates[0].view_index);
+				m_text.append(String.format(
+						"Identified! Socio: %d  Score: 0x%x\n",
+						matchedSocio, falsematch_rate));
 			} else {
 				m_text.append("Not identified.\n");
 			}
 		} catch (UareUException e) {
 			MessageBox.DpError("Engine.Identify()", e);
 		}
-
 		return;
 	}
 
