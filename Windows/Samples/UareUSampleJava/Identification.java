@@ -125,13 +125,13 @@ public class Identification
 					try{
 						//target false positive identification rate: 0.00001
 						//for a discussion of setting the threshold as well as the statistical validity of the dissimilarity score and error rates, consult the Developer Guide.
-						int falsepositive_rate = Engine.PROBABILITY_ONE / 100000; 
+					int falsepositive_rate = Engine.PROBABILITY_ONE / 100000;
 						
 						Engine.Candidate[] vCandidates = engine.Identify(fmdToIdentify, 0, m_fmds, falsepositive_rate, m_nFingerCnt);
 							
-						if(0 != vCandidates.length){
+					if(0 != vCandidates.length){
 							//optional: to get false match rate compare with the top candidate
-							int falsematch_rate = engine.Compare(fmdToIdentify, 0, m_fmds[vCandidates[0].fmd_index], vCandidates[0].view_index);
+						int falsematch_rate = engine.Compare(fmdToIdentify, 0, m_fmds[vCandidates[0].fmd_index], vCandidates[0].view_index);
 								
 							String str = String.format("Fingerprint identified, %s\n", m_vFingerNames[vCandidates[0].fmd_index]);
 							m_text.append(str);
@@ -142,8 +142,8 @@ public class Identification
 						}
 						else{
 							m_text.append("Fingerprint was not identified.\n\n\n");
-						}
-					} catch(UareUException e){ MessageBox.DpError("Engine.Identify()", e); }
+					}
+				} catch(UareUException e){ MessageBox.DpError("Engine.Identify()", e); }
 						
 					//discard FMDs
 					for(int i = 0; i < m_nFingerCnt; i++) m_fmds[i] = null;
@@ -182,41 +182,77 @@ public class Identification
 		return !bCanceled;
 	}
 	
-	private void doModal(JDialog dlgParent){
-		//open reader
-		try{
-			m_reader.Open(Reader.Priority.COOPERATIVE);
-		}
-		catch(UareUException e){ MessageBox.DpError("Reader.Open()", e); }
+	private Fmd[] loadFmdsFromDatabase(){
 		
-		//start capture thread
-		StartCaptureThread();
+		Engine engine = UareUGlobal.GetEngine();
+		Importer importer = UareUGlobal.GetImporter();
 
-		//put initial prompt on the screen
-		m_text.append(m_strPrompt1);
-		String str = String.format(m_strPromptFormat, m_vFingerNames[0]);
-		m_text.append(str);
-		
-		//bring up modal dialog
-		m_dlgParent = dlgParent;
-		m_dlgParent.setContentPane(this);
-		m_dlgParent.pack();
-		m_dlgParent.setLocationRelativeTo(null);
-		m_dlgParent.toFront();
-		m_dlgParent.setVisible(true);
-		m_dlgParent.dispose();
-		
-		//cancel capture
-		StopCaptureThread();
-		
-		//wait for capture thread to finish
-		WaitForCaptureThread();
-		
-		//close reader
-		try{
-			m_reader.Close();
+		java.util.List<Fmd> list = new java.util.ArrayList<>();
+		String url  = "jdbc:mysql://194.238.29.232:3307/bdksiste_bdkgym?useSSL=false";
+		String user = "root";
+		String pass = "Fum4s!Crick0Fu+Maryjuana";
+		try(
+			java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass);
+			java.sql.Statement  st   = conn.createStatement();
+			java.sql.ResultSet  rs   = st.executeQuery("SELECT fmd_data FROM fingerprints")
+		){
+			while(rs.next()){
+				byte[] data = rs.getBytes("fmd_data");
+				list.add(importer.ImportFmd(
+					data,
+					Fmd.Format.DP_PRE_REG_FEATURES,
+					Fmd.Format.DP_REG_FEATURES      // ← enrolled format
+				));
+			}
+		} catch(java.sql.SQLException e){ 
+			e.printStackTrace(); 
+		} catch(UareUException e){ 
+			MessageBox.DpError("Engine.CreateFmd()", e); 
 		}
-		catch(UareUException e){ MessageBox.DpError("Reader.Close()", e); }
+		return list.toArray(new Fmd[0]);
+	}
+
+	private void doModal(JDialog dlgParent){
+
+		Engine engine = UareUGlobal.GetEngine();
+		Importer importer = UareUGlobal.GetImporter();
+
+		byte[] hardcodedBytes = java.util.Base64.getUrlDecoder().decode(
+			"AOg3Acgp43NcwEE381mKq9lcZ2YLbuhS8izeLNGuXQhuHqAujtJqo0k8VkPf0UAXD2UKHvK8gXOGp6WSoe4n5jMKN2ER397WMj0zmbUTvxvmVyHfUGB_K2rhzEkcUK6mBjSgDR2cZU5LMm5po5iN_Ww-YquJ_TcEMQs0EFUa6chBYolCO7bHHuzuWCWeI3d7_94xD1TqmFs-bQg9ssCV_7n8tk9Y0zGAfBYjfA2gLMESKH4VJCGzkOF-CmdRXOB20cLlbMNIr8cGzgGL8XavMVU8QElWj0upHZsbJi-tsQiA1Z9RKu63DZhM2sr7dUDXPa0bp4mIjQRSwB4ouxHUFF-7ZqZ-CXRGe5DDdlf3mk1GGKsF98jNLAY8ymc2cCCROI211PkMlfjowUWqp4a7xO2Qo-b2NuFN167qbwAA"
+		);
+
+		// Print header bytes to identify format
+		System.out.println("Length: " + hardcodedBytes.length);
+		System.out.printf("Header bytes: %02X %02X %02X %02X%n",
+			hardcodedBytes[0], hardcodedBytes[1], 
+			hardcodedBytes[2], hardcodedBytes[3]);
+
+		Fmd fmdToIdentify;
+		try{
+			fmdToIdentify = importer.ImportFmd(
+				hardcodedBytes,
+				Fmd.Format.DP_PRE_REG_FEATURES,
+				Fmd.Format.DP_VER_FEATURES      // ← probe format
+			);
+		}
+		catch(UareUException e){ 
+			MessageBox.DpError("Engine.CreateFmd()", e); 
+			return;
+		}
+
+		m_fmds = loadFmdsFromDatabase();
+		try{
+			int falsepositive_rate = Engine.PROBABILITY_ONE / 100000;
+			Engine.Candidate[] vCandidates = engine.Identify(fmdToIdentify, 0, m_fmds, falsepositive_rate, m_fmds.length);
+			if(0 != vCandidates.length){
+				int falsematch_rate = engine.Compare(fmdToIdentify, 0, m_fmds[vCandidates[0].fmd_index], vCandidates[0].view_index);
+				m_text.append(String.format("Identified! Score: 0x%x\n", falsematch_rate));
+			} else {
+				m_text.append("Not identified.\n");
+			}
+		} catch(UareUException e){ MessageBox.DpError("Engine.Identify()", e); }
+
+		return;
 	}
 	
 	public static void Run(Reader reader){

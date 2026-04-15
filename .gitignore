@@ -8,3 +8,12 @@ One Touch */
 .vs/
 
 obj/
+
+
+classes/
+
+*.jar
+
+*.log
+
+*.mdmp

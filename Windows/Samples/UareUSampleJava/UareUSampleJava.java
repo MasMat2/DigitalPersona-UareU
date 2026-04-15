@@ -129,7 +129,7 @@ public class UareUSampleJava
 			}
 		}
 		else if(e.getActionCommand().equals(ACT_IDENTIFICATION)){
-			if(null == m_reader){
+			if(false && null == m_reader){
 				MessageBox.Warning("Reader is not selected");
 			}
 			else{

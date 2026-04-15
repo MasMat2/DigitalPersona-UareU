@@ -24,7 +24,7 @@ mkdir %CLASS_OUT_DIR%
 set JAVAC=%JAVA_BIN%\javac.exe
 set JAR=%JAVA_BIN%\jar.exe
 
-"%JAVAC%" -g -d %CLASS_OUT_DIR% -classpath %LIB_OUT_DIR%\dpuareu.jar *.java
+"%JAVAC%" -g -d %CLASS_OUT_DIR% -classpath %LIB_OUT_DIR%\dpuareu.jar;%LIB_OUT_DIR%\mysql-connector-j-9.1.0.jar *.java
 
 "%JAR%" -cvf %JAR_NAME% -C %CLASS_OUT_DIR% .\
 
