@@ -267,31 +267,6 @@ public class Enrollment
 	private void doModal(JDialog dlgParent){
 		try { main(null); } catch (Exception e) { e.printStackTrace(); }
 		return;
-		//open reader
-		try{
-			m_reader.Open(Reader.Priority.COOPERATIVE);
-		}
-		catch(UareUException e){ MessageBox.DpError("Reader.Open()", e); }
-		
-		//start enrollment thread
-		m_enrollment.start();
-
-		//bring up modal dialog
-		m_dlgParent = dlgParent;
-		m_dlgParent.setContentPane(this);
-		m_dlgParent.pack();
-		m_dlgParent.setLocationRelativeTo(null);
-		m_dlgParent.setVisible(true);
-		m_dlgParent.dispose();
-		
-		//stop enrollment thread
-		m_enrollment.cancel();
-		
-		//close reader
-		try{
-			m_reader.Close();
-		}
-		catch(UareUException e){ MessageBox.DpError("Reader.Close()", e); }
 	}
 	
 	public static void Run(Reader reader){
