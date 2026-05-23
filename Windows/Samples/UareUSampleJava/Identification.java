@@ -1,7 +1,6 @@
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.Reader;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -18,6 +17,9 @@ public class Identification
 		implements ActionListener {
 	private static final long serialVersionUID = 6;
 	private static final String ACT_BACK = "back";
+
+	private static final String TURNSTILE_PORT = "COM3:";
+	private static final byte[] TURNSTILE_OPEN_CMD = "R01".getBytes();
 
 	private CaptureThread m_capture;
 	private Reader m_reader;
@@ -277,6 +279,7 @@ public class Identification
 				m_text.append(String.format(
 						"Identified! Socio: %d  Score: 0x%x\n",
 						matchedSocio, falsematch_rate));
+				openTurnstile();
 			} else {
 				m_text.append("Not identified.\n");
 			}
@@ -284,6 +287,16 @@ public class Identification
 			MessageBox.DpError("Engine.Identify()", e);
 		}
 		return;
+	}
+
+	private void openTurnstile() {
+		try (java.io.FileOutputStream port = new java.io.FileOutputStream(TURNSTILE_PORT)) {
+			port.write(TURNSTILE_OPEN_CMD);
+			port.flush();
+			m_text.append("Turnstile opened (R01 sent).\n");
+		} catch (java.io.IOException ex) {
+			m_text.append("Serial error: " + ex.getMessage() + "\n");
+		}
 	}
 
 	public static void Run(Reader reader) {
