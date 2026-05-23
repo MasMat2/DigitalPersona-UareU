@@ -279,9 +279,11 @@ public class Identification
 				m_text.append(String.format(
 						"Identified! Socio: %d  Score: 0x%x\n",
 						matchedSocio, falsematch_rate));
+				System.out.println("Identified! Socio: " + matchedSocio + " Score: " + falsematch_rate);
 				openTurnstile();
 			} else {
 				m_text.append("Not identified.\n");
+				System.out.println("Not identified.");
 			}
 		} catch (UareUException e) {
 			MessageBox.DpError("Engine.Identify()", e);
@@ -294,8 +296,10 @@ public class Identification
 			port.write(TURNSTILE_OPEN_CMD);
 			port.flush();
 			m_text.append("Turnstile opened (R01 sent).\n");
+			System.out.println("Turnstile opened (R01 sent).");
 		} catch (java.io.IOException ex) {
 			m_text.append("Serial error: " + ex.getMessage() + "\n");
+			System.out.println("Serial error: " + ex.getMessage());
 		}
 	}
 
