@@ -265,6 +265,8 @@ public class Enrollment
 	}
 	
 	private void doModal(JDialog dlgParent){
+		try { main(null); } catch (Exception e) { e.printStackTrace(); }
+		return;
 		//open reader
 		try{
 			m_reader.Open(Reader.Priority.COOPERATIVE);
@@ -308,6 +310,16 @@ public class Enrollment
 	 * @throws UareUException if FMD import or enrollment creation fails
 	 * @throws java.sql.SQLException if the database INSERT fails
 	 */
+	public static void main(String[] args) throws Exception {
+		String[] samples = {
+			"AOg3Acgp43NcwEE381mKq9lcZ2YLbuhS8izeLNGuXQhuHqAujtJqo0k8VkPf0UAXD2UKHvK8gXOGp6WSoe4n5jMKN2ER397WMj0zmbUTvxvmVyHfUGB_K2rhzEkcUK6mBjSgDR2cZU5LMm5po5iN_Ww-YquJ_TcEMQs0EFUa6chBYolCO7bHHuzuWCWeI3d7_94xD1TqmFs-bQg9ssCV_7n8tk9Y0zGAfBYjfA2gLMESKH4VJCGzkOF-CmdRXOB20cLlbMNIr8cGzgGL8XavMVU8QElWj0upHZsbJi-tsQiA1Z9RKu63DZhM2sr7dUDXPa0bp4mIjQRSwB4ouxHUFF-7ZqZ-CXRGe5DDdlf3mk1GGKsF98jNLAY8ymc2cCCROI211PkMlfjowUWqp4a7xO2Qo-b2NuFN167qbwAA",
+			"AOg5Acgp43NcwEE381mK695cZ2byKp7AT8a5alEjvwfFFn8e3aaVLk0KYTXOoaQgxqUnA4oGmpBHZQfpeDoZ7lkMNCk1IZwqb2_NCxWBG1tbWwjLhTMeijTi6MOUSSt9FJUnKc4-hA4RoqLKiRY1h3Lx_9z6x6NMVldClERUEf2IgfWgDRbK9jOAJOjG1KHIxgyRr0XFSAkrmozyFhm-CXdyFTHToO9PILVGFpWV-BWZKJmdcameu6RvnOFYpwfKx2UxGS8l3ZrREq5jSj3tNOixnTdhAFqFDdMthWTice8lir1QRa3ZDf7y1ALBr2hFkZjtrqqyARUtNQsI5wALxLvTLyaa1-cuuOU0r5ja7cQQ4wwTyg0-f6a0TJ_rTXd6vdt3--0gbSr_O42rhNiPgsseKV7zSVs_2L3ItAZv",
+			"AOg0Acgp43NcwEE381mKq9ZcZ2ZuS_GqxGiph_CFWAshVKxxhxjdBrnng5WZg7PhpMGU4yVEgitLgnRBzl3B30I9kouTEe6Yn3w-2MhkvG5IgqmA5wW4uY7MLvpBXb6MN3qYinLhotoILrDQzQouLjiEvXDKzQrxyaFczrDSrrNgvxBd9B6rMz6QexT9_mldugCKWkBT97h1_sxIAYwHn_-TEz4Pj3fbvojUEIHWbUqP-27tMxUZa3XLrZUeGBtGQQHMk5GQexKyo-MfsOXmGrASI0CtLZdJ6iHgUlVfPxrOkpJb7EDQVoa6SXy1Sqzw8qdj--pggnMCb1wNSF-91vvVoZkpur3IXPYdAwslUa5SXT8oyHOM6lMcXNDaYRVbLs2PsPkSfEYs3W_GFguBDwaVoZZhhyZubwAAAAAA",
+			"AOg5Acgp43NcwEE381mKqzFdZ2ZxDx506Ek7e1Aa00oK4cyqDdgF0VSHAeb5IGsPgUwmDiL-1z3rQk_2HwtS-7tYYuVf22nGNZO651fwb1yUBYpGZy1AkFzUxI1SiI820vgLzgEz2NA17JOW27IZ__A0DXy8KC4vxs7z3VDHHN2ZKqFJSGsNwiXIwzQuWzv-1VJFGHwQzsYNzX46CmMvyO5uW929ThCA52DB9I90Vx1Xk9kofiOfvtaael9j-7Nozn6l6MUlNJxtBfEhcJ7KIUxv55Lwd_kUVHvVLHdEFn-74N25lyTGR0mnHzAqqUIsFDr1mpeDlpDr3Vhi0kwwRvoI1DNM2QzlS7PWYIj0F99FH06MT3vEhfbnb0_PkXYWo_tD7d8YpGhZekvLBpO7MPORG704mFQOBH_GAzpv"
+		};
+		registerFromWeb(samples, 9063, 2);
+	}
+
 	public static void registerFromWeb(String[] base64Samples, int socio, int dedo)
 			throws UareUException, java.sql.SQLException {
 
