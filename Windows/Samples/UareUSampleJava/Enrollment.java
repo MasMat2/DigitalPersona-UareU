@@ -2,6 +2,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -295,5 +296,74 @@ public class Enrollment
 		JDialog dlg = new JDialog((JDialog)null, "Enrollment", true);
 		Enrollment enrollment = new Enrollment(reader);
 		enrollment.doModal(dlg);
+	}
+
+	/**
+	 * Register a fingerprint received from the frontend JavaScript API.
+	 *
+	 * @param base64Samples  4 base64URL-encoded intermediate-format (DP_PRE_REG_FEATURES) samples
+	 *                       taken from the {@code Data} field of each JS sample object
+	 * @param socio          member ID to store in tbhuellas
+	 * @param dedo           finger index (0-9) to store in tbhuellas
+	 * @throws UareUException if FMD import or enrollment creation fails
+	 * @throws java.sql.SQLException if the database INSERT fails
+	 */
+	public static void registerFromWeb(String[] base64Samples, int socio, int dedo)
+			throws UareUException, java.sql.SQLException {
+
+		Importer importer = UareUGlobal.GetImporter();
+		Engine   engine   = UareUGlobal.GetEngine();
+
+		// 1. Decode each base64URL sample and import as DP_PRE_REG_FEATURES
+		final Engine.PreEnrollmentFmd[] preFmds = new Engine.PreEnrollmentFmd[base64Samples.length];
+		for (int i = 0; i < base64Samples.length; i++) {
+			byte[] bytes = java.util.Base64.getUrlDecoder().decode(base64Samples[i]);
+			Fmd fmd = importer.ImportFmd(
+					bytes,
+					Fmd.Format.DP_PRE_REG_FEATURES,
+					Fmd.Format.DP_PRE_REG_FEATURES);
+			Engine.PreEnrollmentFmd pre = new Engine.PreEnrollmentFmd();
+			pre.fmd        = fmd;
+			pre.view_index = 0;
+			preFmds[i]     = pre;
+		}
+
+		// 2. Inline EnrollmentCallback that serves the pre-imported FMDs one by one
+		final int[] cursor = {0};
+		Engine.EnrollmentCallback callback = new Engine.EnrollmentCallback() {
+			@Override
+			public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
+				if (cursor[0] < preFmds.length) {
+					return preFmds[cursor[0]++];
+				}
+				return null; // signal the engine that no more samples are available
+			}
+		};
+
+		// 3. Create the DP_REG_FEATURES enrollment template
+		Fmd enrollmentFmd = engine.CreateEnrollmentFmd(Fmd.Format.DP_REG_FEATURES, callback);
+		if (enrollmentFmd == null) {
+			throw new IllegalStateException("CreateEnrollmentFmd returned null — not enough samples or enrollment was cancelled");
+		}
+
+		// 4. Convert bytes to ISO-8859-1 string (same encoding used by loadFmdsFromDatabase)
+		String huellaStr = new String(enrollmentFmd.getData(), StandardCharsets.ISO_8859_1);
+
+		// 5. INSERT into tbhuellas
+		String url  = "jdbc:mysql://194.238.29.232:3307/bdksiste_bdkgym"
+				    + "?useSSL=false&characterEncoding=ISO-8859-1";
+		String user = "root";
+		String pass = "Fum4s!Crick0Fu+Maryjuana";
+
+		try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass);
+			 java.sql.PreparedStatement ps = conn.prepareStatement(
+				 "INSERT INTO tbhuellas (socio, dedo, huella) VALUES (?, ?, ?)")) {
+			ps.setInt(1, socio);
+			ps.setInt(2, dedo);
+			ps.setString(3, huellaStr);
+			ps.executeUpdate();
+			System.out.println("Registered fingerprint for socio=" + socio + " dedo=" + dedo
+					+ " fmd_size=" + enrollmentFmd.getData().length);
+		}
 	}
 }
